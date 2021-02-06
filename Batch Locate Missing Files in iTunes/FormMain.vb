@@ -198,8 +198,8 @@
                                 TextBoxLog.AppendText(sMessage)
                                 sMessage = ""
 
-                                'oTrack.Location = sNewLocation
-                                'oTrack.UpdateInfoFromFile()
+                                oTrack.Location = sNewLocation
+                                oTrack.UpdateInfoFromFile()
 
                             Else
 
