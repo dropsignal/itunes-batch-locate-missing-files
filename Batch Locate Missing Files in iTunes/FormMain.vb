@@ -2,23 +2,16 @@
     Private Function BuildLocation(BaseFolder As String, AlbumArtist As String, Album As String, DiscNumber As Integer, DiscCount As Integer, TrackNumber As Integer, TrackCount As Integer, Name As String, Kind As String) As String
 
         Dim sPath As String
-        Dim sNewAlbumArtist As String
-        Dim sNewAlbum As String
-        Dim sNewName As String
-
-        sNewAlbumArtist = Truncate(AlbumArtist, 33)
-        sNewAlbum = Truncate(Album, 40)
-        sNewName = Truncate(Name, 33)
 
         sPath = BaseFolder
 
-        sPath = sPath & Sanitize(sNewAlbumArtist) & "\"
-        sPath = sPath & Sanitize(sNewAlbum) & "\"
+        sPath = sPath & AlbumArtist & "\"
+        sPath = sPath & Album & "\"
         If DiscCount > 1 Then
             sPath = sPath & DiscNumber.ToString & "-"
         End If
         sPath = sPath & TrackNumber.ToString("00") & " "
-        sPath = sPath & Sanitize(sNewName)
+        sPath = sPath & Name
 
         Select Case Kind
             Case "Purchased AAC audio file"
@@ -44,7 +37,28 @@
         sPath = ""
 
     End Function
-    Private Function Sanitize(Value As String) As String
+    Private Function TestLocation(Path As String) As Boolean
+
+        Dim FSO As Scripting.FileSystemObject
+
+        If Path <> "" Then
+
+            FSO = New Scripting.FileSystemObject
+
+            If FSO.FileExists(Path) Or FSO.FolderExists(Path) Then
+                TestLocation = True
+            Else
+                TestLocation = False
+            End If
+
+            FSO = Nothing
+
+        Else
+            TestLocation = False
+        End If
+
+    End Function
+    Private Function Sanitizer(Value As String) As String
 
         Dim sValue As String
 
@@ -60,26 +74,296 @@
         sValue = sValue.Replace(">", "_")
         sValue = sValue.Replace("|", "_")
 
-        Sanitize = sValue
+        Sanitizer = sValue
 
         sValue = ""
 
     End Function
-    Private Function Truncate(Value As String, Length As Integer) As String
+    Private Function SanitizeLeadingPeriod(Value As String) As String
+
+        Dim sValue As String
+        Dim iLength As Integer
+        Dim cCharacter As Char
+
+        sValue = Value
+        iLength = Len(sValue)
+
+        cCharacter = sValue.Substring(0, 1)
+        If cCharacter = "." Then
+            sValue = sValue.Substring(1, iLength - 1)
+            sValue = "_" & sValue
+        End If
+
+        SanitizeLeadingPeriod = sValue
+
+        sValue = ""
+
+    End Function
+    Private Function SanitizeTrailingPeriod(Value As String) As String
+
+        Dim sValue As String
+        Dim iLength As Integer
+        Dim cCharacter As Char
+
+        sValue = Value
+        iLength = Len(sValue)
+
+        cCharacter = sValue.Substring(iLength - 1, 1)
+        If cCharacter = "." Then
+            sValue = sValue.Substring(0, iLength - 1)
+            sValue = sValue & "_"
+        End If
+
+        SanitizeTrailingPeriod = sValue
+
+        sValue = ""
+
+    End Function
+    Private Function SanitizeLeadingSingleQuote(Value As String) As String
+
+        Dim sValue As String
+        Dim iLength As Integer
+        Dim cCharacter As Char
+
+        sValue = Value
+        iLength = Len(sValue)
+
+        cCharacter = sValue.Substring(0, 1)
+        If cCharacter = "'" Then
+            sValue = sValue.Substring(1, iLength - 1)
+            sValue = "_" & sValue
+        End If
+
+        SanitizeLeadingSingleQuote = sValue
+
+        sValue = ""
+
+    End Function
+    Private Function Truncator(Value As String, Length As Integer) As String
 
         Dim sValue As String
         Dim iLength As Integer
 
         sValue = Value
 
-        iLength = Len(sValue)
-        If iLength > Length Then iLength = Length
-        sValue = sValue.Substring(0, iLength)
-        sValue = sValue.Trim
+        If Length > 0 Then
+            iLength = Len(sValue)
+            If iLength > Length Then iLength = Length
+            sValue = sValue.Substring(0, iLength)
+            sValue = sValue.Trim
+        End If
 
-        Truncate = sValue
+        Truncator = sValue
 
         sValue = ""
+
+    End Function
+    Private Function CombinationTests(Kind As String, AlbumArtist As String, Album As String, Name As String, TrackNumber As Integer, TrackCount As Integer, DiscNumber As Integer, DiscCount As Integer, Location As String) As String
+
+        Dim sKind As String
+        Dim sAlbumArtist As String
+        Dim sAlbum As String
+        Dim sName As String
+        Dim iTrackNumber As Integer
+        Dim iTrackCount As Integer
+        Dim iDiscNumber As Integer
+        Dim iDiscCount As Integer
+        Dim sLocation As String
+        Dim bPathFound As Boolean
+        Dim sPath As String
+
+        sKind = Kind
+        sAlbumArtist = AlbumArtist
+        sAlbum = Album
+        sName = Name
+        iTrackNumber = TrackNumber
+        iTrackCount = TrackCount
+        iDiscNumber = DiscNumber
+        iDiscCount = DiscCount
+        sLocation = Location
+
+        bPathFound = False
+        sPath = sLocation
+
+        bPathFound = TestLocation(sPath)
+        If Not bPathFound Then
+            sAlbumArtist = Sanitizer(sAlbumArtist) : sAlbum = Sanitizer(sAlbum) : sName = Sanitizer(sName)
+            sName = SanitizeLeadingSingleQuote(sName)
+            sAlbum = SanitizeLeadingPeriod(sAlbum)
+            sAlbumArtist = SanitizeTrailingPeriod(sAlbumArtist) : sAlbum = SanitizeTrailingPeriod(sAlbum)
+            sAlbumArtist = Truncator(sAlbumArtist, 0) : sAlbum = Truncator(sAlbum, 0) : sName = Truncator(sName, 0)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 40) : sAlbum = Truncator(sAlbum, 40) : sName = Truncator(sName, 40)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 33) : sAlbum = Truncator(sAlbum, 40) : sName = Truncator(sName, 40)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 40) : sAlbum = Truncator(sAlbum, 33) : sName = Truncator(sName, 40)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 40) : sAlbum = Truncator(sAlbum, 40) : sName = Truncator(sName, 33)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 33) : sAlbum = Truncator(sAlbum, 33) : sName = Truncator(sName, 40)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 33) : sAlbum = Truncator(sAlbum, 40) : sName = Truncator(sName, 33)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 40) : sAlbum = Truncator(sAlbum, 33) : sName = Truncator(sName, 33)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 33) : sAlbum = Truncator(sAlbum, 33) : sName = Truncator(sName, 33)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 31) : sAlbum = Truncator(sAlbum, 40) : sName = Truncator(sName, 40)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 40) : sAlbum = Truncator(sAlbum, 31) : sName = Truncator(sName, 40)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 40) : sAlbum = Truncator(sAlbum, 40) : sName = Truncator(sName, 31)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 31) : sAlbum = Truncator(sAlbum, 31) : sName = Truncator(sName, 40)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 31) : sAlbum = Truncator(sAlbum, 40) : sName = Truncator(sName, 31)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 40) : sAlbum = Truncator(sAlbum, 31) : sName = Truncator(sName, 31)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 31) : sAlbum = Truncator(sAlbum, 31) : sName = Truncator(sName, 31)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 31) : sAlbum = Truncator(sAlbum, 33) : sName = Truncator(sName, 33)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 33) : sAlbum = Truncator(sAlbum, 31) : sName = Truncator(sName, 33)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 33) : sAlbum = Truncator(sAlbum, 33) : sName = Truncator(sName, 31)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 31) : sAlbum = Truncator(sAlbum, 31) : sName = Truncator(sName, 33)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 31) : sAlbum = Truncator(sAlbum, 33) : sName = Truncator(sName, 31)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        sAlbumArtist = AlbumArtist : sAlbum = Album : sName = Name
+
+        If Not bPathFound Then
+            sAlbumArtist = Truncator(sAlbumArtist, 33) : sAlbum = Truncator(sAlbum, 31) : sName = Truncator(sName, 31)
+            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+            bPathFound = TestLocation(sPath)
+        End If
+
+        If bPathFound Then
+            CombinationTests = sPath
+        Else
+            CombinationTests = ""
+        End If
+
+        sPath = ""
+        bPathFound = False
 
     End Function
     Private Sub ButtonScan_Click(sender As Object, e As EventArgs) Handles ButtonScan.Click
@@ -99,9 +383,10 @@
         Dim iDiscNumber As Integer
         Dim iDiscCount As Integer
         Dim sLocation As String
+        Dim sCalculatedPath As String
+        Dim bPathFound As Boolean
         Dim sPath As String
         Dim sMessage As String
-        Dim sNewLocation As String
 
         TextBoxMediaFolder.Enabled = False
         ButtonBrowse.Enabled = False
@@ -115,7 +400,12 @@
 
         lTrackCount = oTracks.Count
 
+        ProgressBar1.Maximum = 1
+        ProgressBar1.Maximum = lTrackCount
+
         For lTrackIndex = 1 To lTrackCount
+
+            ProgressBar1.Value = lTrackIndex
 
             If oTracks.Item(lTrackIndex).Kind = iTunesLib.ITTrackKind.ITTrackKindFile Then
 
@@ -132,89 +422,42 @@
                 sLocation = oTrack.Location
 
                 Select Case sKind
-                    Case "Purchased AAC audio file", "MPEG audio file", "Protected AAC audio file", "Purchased MPEG-4 video file", "Protected MPEG-4 video file", "MPEG-4 video file"
+                    Case "iTunes LP", "MPEG audio file", "MPEG-4 video file", "Protected AAC audio file", "Protected MPEG-4 video file", "Purchased AAC audio file", "Purchased MPEG-4 video file"
 
-                        If Not FSO.FileExists(sLocation) Then
-
-                            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
-
-                            If FSO.FileExists(sPath) Then
-                                sMessage = "Found: "
-                                sMessage = sMessage & sPath & vbCrLf
-                                TextBoxLog.AppendText(sMessage)
-                                sMessage = ""
-                            Else
-                                sMessage = "Missing: "
-                                sMessage = sMessage & sPath & vbCrLf
-                                TextBoxLog.AppendText(sMessage)
-                                sMessage = ""
-                            End If
-
-                            sPath = ""
-
-                        End If
-
-                    Case "iTunes LP"
-
-                        If Not FSO.FolderExists(sLocation) Then
-
-                            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
-
-                            If FSO.FileExists(sPath) Then
-                                sMessage = "Found: "
-                                sMessage = sMessage & sPath & vbCrLf
-                                TextBoxLog.AppendText(sMessage)
-                                sMessage = ""
-                            Else
-                                sMessage = "Missing: "
-                                sMessage = sMessage & sPath & vbCrLf
-                                TextBoxLog.AppendText(sMessage)
-                                sMessage = ""
-                            End If
-
-                            sPath = ""
-
-                        End If
+                        sPath = CombinationTests(sKind, sAlbumArtist, sAlbum, sName, iTrackNumber, iTrackCount, iDiscNumber, iDiscCount, sLocation)
 
                     Case "Apple Lossless audio file"
 
-                        If sLocation = "" Then
+                        sCalculatedPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+                        bPathFound = False
+                        sPath = ""
 
-                            sPath = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, sKind)
+                        sPath = CombinationTests("MPEG audio file", sAlbumArtist, sAlbum, sName, iTrackNumber, iTrackCount, iDiscNumber, iDiscCount, sLocation)
 
-                            sMessage = "Missing: "
+                        If sPath <> "" Then
+
+                            sMessage = "Updating "
+                            sMessage = sMessage & sCalculatedPath
+                            sMessage = sMessage & " to "
                             sMessage = sMessage & sPath & vbCrLf
                             TextBoxLog.AppendText(sMessage)
                             sMessage = ""
 
-                            sNewLocation = BuildLocation(TextBoxMediaFolder.Text, sAlbumArtist, sAlbum, iDiscNumber, iDiscCount, iTrackNumber, iTrackCount, sName, "MPEG audio file")
-
-                            If FSO.FileExists(sNewLocation) Then
-
-                                sMessage = "Updating "
-                                sMessage = sMessage & sPath
-                                sMessage = sMessage & " to "
-                                sMessage = sMessage & sNewLocation & vbCrLf
-                                TextBoxLog.AppendText(sMessage)
-                                sMessage = ""
-
-                                oTrack.Location = sNewLocation
+                            If lTrackIndex <> 4536 Then
+                                oTrack.Location = sPath
                                 oTrack.UpdateInfoFromFile()
-
-                            Else
-
-                                sMessage = "Missing: "
-                                sMessage = sMessage & sNewLocation & vbCrLf
-                                TextBoxLog.AppendText(sMessage)
-                                sMessage = ""
-
                             End If
 
-                            sNewLocation = ""
-
-                            sPath = Nothing
-
+                        Else
+                            sMessage = "Failed to find alternative to "
+                            sMessage = sMessage & sCalculatedPath & vbCrLf
+                            TextBoxLog.AppendText(sMessage)
+                            sMessage = ""
                         End If
+
+                        sPath = ""
+                        bPathFound = False
+                        sCalculatedPath = ""
 
                 End Select
 
@@ -229,26 +472,6 @@
                 sKind = ""
 
                 oTrack = Nothing
-
-            Else
-
-                sMessage = "Unsupported: "
-
-                Select Case oTracks.Item(lTrackIndex).Kind
-                    Case iTunesLib.ITTrackKind.ITTrackKindCD
-                        sMessage = sMessage & "ITTrackKindCD" & vbCrLf
-                    Case iTunesLib.ITTrackKind.ITTrackKindDevice
-                        sMessage = sMessage & "ITTrackKindDevice" & vbCrLf
-                    Case iTunesLib.ITTrackKind.ITTrackKindSharedLibrary
-                        sMessage = sMessage & "ITTrackKindSharedLibrary" & vbCrLf
-                    Case iTunesLib.ITTrackKind.ITTrackKindUnknown
-                        sMessage = sMessage & "ITTrackKindUnknown" & vbCrLf
-                    Case iTunesLib.ITTrackKind.ITTrackKindURL
-                        sMessage = sMessage & "ITTrackKindURL" & vbCrLf
-                End Select
-
-                TextBoxLog.AppendText(sMessage)
-                sMessage = ""
 
             End If
         Next

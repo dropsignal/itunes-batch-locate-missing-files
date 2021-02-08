@@ -26,6 +26,7 @@ Partial Class FormMain
         Me.TextBoxLog = New System.Windows.Forms.TextBox()
         Me.TextBoxMediaFolder = New System.Windows.Forms.TextBox()
         Me.ButtonBrowse = New System.Windows.Forms.Button()
+        Me.ProgressBar1 = New System.Windows.Forms.ProgressBar()
         Me.SuspendLayout()
         '
         'ButtonScan
@@ -64,11 +65,19 @@ Partial Class FormMain
         Me.ButtonBrowse.Text = "&Browse"
         Me.ButtonBrowse.UseVisualStyleBackColor = True
         '
+        'ProgressBar1
+        '
+        Me.ProgressBar1.Location = New System.Drawing.Point(12, 444)
+        Me.ProgressBar1.Name = "ProgressBar1"
+        Me.ProgressBar1.Size = New System.Drawing.Size(814, 23)
+        Me.ProgressBar1.TabIndex = 4
+        '
         'FormMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(7.0!, 15.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(838, 450)
+        Me.ClientSize = New System.Drawing.Size(838, 478)
+        Me.Controls.Add(Me.ProgressBar1)
         Me.Controls.Add(Me.ButtonBrowse)
         Me.Controls.Add(Me.TextBoxMediaFolder)
         Me.Controls.Add(Me.TextBoxLog)
@@ -84,4 +93,5 @@ Partial Class FormMain
     Friend WithEvents TextBoxLog As TextBox
     Friend WithEvents TextBoxMediaFolder As TextBox
     Friend WithEvents ButtonBrowse As Button
+    Friend WithEvents ProgressBar1 As ProgressBar
 End Class
